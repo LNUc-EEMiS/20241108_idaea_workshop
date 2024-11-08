@@ -47,25 +47,36 @@ library(patchwork)
 
 ```{r read-counts}
 #| label: read-counts
-counts <- read_tsv(
-  'data/p19_06/ASV_table.tsv', 
-  col_types = cols(.default = col_integer(), ASV_ID = col_character())
-) %>%
-  pivot_longer(2:ncol(.), names_to = 'sample', values_to = 'count') %>%
-  filter(count > 0) %>%
-  rename_with(str_to_lower) %>%
-  group_by(sample) %>%
-  mutate(relab = count/sum(count)) %>%
-  ungroup()
+counts <- tibble(
+  asv_id = character(), sample = character(), count = integer(), relab = double()
+)
+for ( f in Sys.glob('data/*/ASV_table.tsv')) {
+  counts <- counts %>%
+    union(
+      read_tsv(
+        f,
+        col_types = cols(.default = col_integer(), ASV_ID = col_character())
+      ) %>%
+        pivot_longer(2:ncol(.), names_to = 'sample', values_to = 'count') %>%
+        filter(count > 0) %>%
+        rename_with(str_to_lower) %>%
+        group_by(sample) %>%
+        mutate(relab = count/sum(count)) %>%
+        ungroup()
+    )
+}
 ```
 
 ```{r read-taxonomy}
 #| label: read-taxonomy
 taxonomy <- read_tsv(
-  'data/p19_06/p19_06.ASV_tax_species.sbdi-gtdb_R09-RS220-1.tsv',
+  Sys.glob('data/*/*tax*tsv'),
   show_col_types = FALSE
 ) %>%
-  rename_with(str_to_lower)
+  rename_with(str_to_lower) %>%
+  group_by(asv_id) %>%
+  filter(confidence == max(confidence)) %>%
+  ungroup()
 ```
 
 ```{r func-toptaxa}
