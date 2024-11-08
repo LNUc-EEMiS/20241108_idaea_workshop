@@ -1,5 +1,5 @@
 ---
-title: "__TITLE__"
+title: "BCN demo"
 author: "daniel.lundin@lnu.se"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 format:
@@ -29,9 +29,6 @@ ggplot2::theme_set(ggplot2::theme_bw())
 
 library(readr)
 library(tibble)
-library(feather)
-library(data.table)
-library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(tidyr)
 library(purrr)
@@ -48,8 +45,27 @@ library(patchwork)
 #| label: constants
 ```
 
-```{r read-data}
-#| label: read-data
+```{r read-counts}
+#| label: read-counts
+counts <- read_tsv(
+  'data/p19_06/ASV_table.tsv', 
+  col_types = cols(.default = col_integer(), ASV_ID = col_character())
+) %>%
+  pivot_longer(2:ncol(.), names_to = 'sample', values_to = 'count') %>%
+  filter(count > 0) %>%
+  rename_with(str_to_lower) %>%
+  group_by(sample) %>%
+  mutate(relab = count/sum(count)) %>%
+  ungroup()
+```
+
+```{r read-taxonomy}
+#| label: read-taxonomy
+taxonomy <- read_tsv(
+  'data/p19_06/p19_06.ASV_tax_species.sbdi-gtdb_R09-RS220-1.tsv',
+  show_col_types = FALSE
+) %>%
+  rename_with(str_to_lower)
 ```
 
 # Version history
@@ -59,6 +75,10 @@ library(patchwork)
 # Introduction
 
 # Materials and Methods
+
+## Amplicon annotation
+
+* nf-core/ampliseq [@ampliseq]
 
 ## R and packages
 
@@ -74,6 +94,19 @@ cite_packages(output = "table", pkgs = "Session", out.dir = getwd()) %>%
 ```
 
 # Results
+
+## Community composition
+
+```{r fig-phyla}
+#| label: fig-phyla
+counts %>%
+  inner_join(taxonomy, by = join_by(asv_id)) %>%
+  group_by(phylum, sample) %>%
+  summarise(relab = sum(relab), .groups = 'drop') %>%
+  ggplot(aes(x = sample, y = relab, fill = phylum)) +
+  geom_col()
+```
+
 
 # Discussion
 
