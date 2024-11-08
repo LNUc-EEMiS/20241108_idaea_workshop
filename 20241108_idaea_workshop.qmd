@@ -68,6 +68,22 @@ taxonomy <- read_tsv(
   rename_with(str_to_lower)
 ```
 
+```{r func-toptaxa}
+#| label: func-toptaxa
+toptaxa <- function(rnk) {
+  counts %>%
+    inner_join(taxonomy, by = join_by(asv_id)) %>%
+    filter(!is.na({{ rnk }})) %>%
+    group_by({{ rnk }}, sample) %>%
+    summarise(relab = sum(relab), .groups = 'drop_last') %>%
+    summarise(mean_relab = mean(relab)) %>%
+    mutate(r = rank(desc(mean_relab))) %>%
+    arrange(r)
+}
+toptaxa(phylum)
+toptaxa(order)
+```
+
 # Version history
 
 # Summary
@@ -101,10 +117,17 @@ cite_packages(output = "table", pkgs = "Session", out.dir = getwd()) %>%
 #| label: fig-phyla
 counts %>%
   inner_join(taxonomy, by = join_by(asv_id)) %>%
-  group_by(phylum, sample) %>%
+  group_by(class, sample) %>%
   summarise(relab = sum(relab), .groups = 'drop') %>%
-  ggplot(aes(x = sample, y = relab, fill = phylum)) +
-  geom_col()
+  left_join(
+    toptaxa(class) %>%
+      filter(r <= 12) %>%
+      transmute(class, tclass = class),
+    by = join_by(class)
+  ) %>%
+  ggplot(aes(x = sample, y = relab, fill = tclass)) +
+  geom_col() +
+  scale_fill_brewer('Class', palette = 'Paired', na.value = 'grey')
 ```
 
 
