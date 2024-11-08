@@ -47,13 +47,11 @@ library(patchwork)
 
 ```{r read-counts}
 #| label: read-counts
-counts <- tibble(
-  asv_id = character(), sample = character(), count = integer(), relab = double()
-)
-for ( f in Sys.glob('data/*/ASV_table.tsv')) {
-  counts <- counts %>%
-    union(
-      read_tsv(
+counts <- tibble(fname = Sys.glob('data/*/ASV_table.tsv')) %>%
+  mutate(
+    d = map(
+      fname,
+      \(f) read_tsv(
         f,
         col_types = cols(.default = col_integer(), ASV_ID = col_character())
       ) %>%
@@ -64,7 +62,11 @@ for ( f in Sys.glob('data/*/ASV_table.tsv')) {
         mutate(relab = count/sum(count)) %>%
         ungroup()
     )
-}
+  ) %>%
+  unnest(d)
+  # counts <- counts %>%
+  #   union(
+  #   )
 ```
 
 ```{r read-taxonomy}
